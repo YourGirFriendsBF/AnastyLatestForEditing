@@ -254,17 +254,14 @@ try:
     if len(DB_URI) == 0:
         raise KeyError
 except:
-    DB_URI = None
+    tgBotMaxFileSize = 2097151000
 try:
-    LEECH_SPLIT_SIZE = getConfig('LEECH_SPLIT_SIZE')
-    if len(LEECH_SPLIT_SIZE) == 0 or (not IS_PREMIUM_USER and int(LEECH_SPLIT_SIZE) > 2097152000) \
-       or int(LEECH_SPLIT_SIZE) > 4194304000:
+    TG_SPLIT_SIZE = getConfig('TG_SPLIT_SIZE')
+    if len(TG_SPLIT_SIZE) == 0 or int(TG_SPLIT_SIZE) > tgBotMaxFileSize:
         raise KeyError
-    LEECH_SPLIT_SIZE = int(LEECH_SPLIT_SIZE)
+    TG_SPLIT_SIZE = int(TG_SPLIT_SIZE)
 except:
-    LEECH_SPLIT_SIZE = 4194304000 if IS_PREMIUM_USER else 2097152000
-
-MAX_SPLIT_SIZE = 4194304000 if IS_PREMIUM_USER else 2097152000
+    TG_SPLIT_SIZE = tgBotMaxFileSize
 
 try:
     DUMP_CHAT = getConfig('DUMP_CHAT')

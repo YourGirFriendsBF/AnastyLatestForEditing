@@ -120,7 +120,24 @@ EXTENSION_FILTER = set(['.aria2'])
 LEECH_LOG = set()	
 MIRROR_LOGS = set()
 LINK_LOGS = set()
-
+try:
+    SOURCE_LINK = getConfig('SOURCE_LINK')
+    SOURCE_LINK = SOURCE_LINK.lower() == 'true'
+except KeyError:
+    SOURCE_LINK = False
+try:	
+    BOT_PM = getConfig('BOT_PM')	
+    BOT_PM = BOT_PM.lower() == 'true'	
+except KeyError:	
+    BOT_PM = False
+    
+try:
+    aid = getConfig('LINK_LOGS')
+    aid = aid.split(' ')
+    for _id in aid:
+        LINK_LOGS.add(int(_id))
+except:
+    pass    
 try:
     SOURCE_LINK = getConfig('SOURCE_LINK')
     SOURCE_LINK = SOURCE_LINK.lower() == 'true'

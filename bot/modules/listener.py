@@ -7,7 +7,7 @@ from html import escape
 
 from bot import Interval, INDEX_URL, BUTTON_FOUR_NAME, BUTTON_FOUR_URL, BUTTON_FIVE_NAME, BUTTON_FIVE_URL, \
                 BUTTON_SIX_NAME, BUTTON_SIX_URL, VIEW_LINK, aria2, DOWNLOAD_DIR, download_dict, download_dict_lock, \
-                LEECH_SPLIT_SIZE, LOGGER, DB_URI, INCOMPLETE_TASK_NOTIFIER, MAX_SPLIT_SIZE
+                TG_SPLIT_SIZE, LOGGER, DB_URI, INCOMPLETE_TASK_NOTIFIER, MAX_SPLIT_SIZE, LEECH_LOG, BOT_PM
 from bot.helper.ext_utils.fs_utils import get_base_name, get_path_size, split_file, clean_download, clean_target
 from bot.helper.ext_utils.exceptions import NotSupportedExtractionArchive
 from bot.helper.mirror_utils.status_utils.extract_status import ExtractStatus

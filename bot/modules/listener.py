@@ -282,9 +282,9 @@ class MirrorLeechListener:
             logwarn = ''
         if LEECH_LOG and self.message.chat.type != 'private':
             if EMOJI_THEME is True:
-                logleechwarn = f"<b>⚠️ I have sent files in Leech Log Channel. Join Leech Log channel</a> </b>\n"
+                logleechwarn = f"<b>⚠️ I have sent files in Leech Log Channel. Join <a href=\"{LEECH_LOG_URL}\">Leech Log channel</a> </b>\n"
             else:
-                logleechwarn = f"<b>I have sent files in Leech Log Channel. Join Leech Log channel</a> </b>\n"
+                logleechwarn = f"<b>I have sent files in Leech Log Channel. Join <a href=\"{LEECH_LOG_URL}\">Leech Log channel</a> </b>\n"
         elif self.message.chat.type == 'private':
             logleechwarn = ''
         else:
@@ -373,6 +373,11 @@ class MirrorLeechListener:
                                         reply_markup=InlineKeyboardMarkup(buttons.build_menu(2)),
                                         parse_mode=ParseMode.HTML)
             if not files:
+                if PICS:
+                    uploadmsg = sendPhoto(msg, self.bot, self.message, random.choice(PICS), InlineKeyboardMarkup(buttons.build_menu(2)))
+                else:
+                    uploadmsg = sendMarkup(msg, self.bot, self.message, InlineKeyboardMarkup(buttons.build_menu(2)))
+            else:
                 fmsg = ''
                 for index, (link, name) in enumerate(files.items(), start=1):
                     fmsg += f"{index}. <a href='{link}'>{name}</a>\n"
@@ -381,6 +386,11 @@ class MirrorLeechListener:
                         sleep(1)
                         fmsg = ''
                 if fmsg != '':
+                    if PICS:
+                        uploadmsg = sendPhoto(msg + fmsg + pmwarn + logleechwarn + warnmsg, self.bot, self.message, random.choice(PICS), InlineKeyboardMarkup(buttons.build_menu(2)))
+                    else:
+                        uploadmsg = sendMarkup(msg + fmsg + pmwarn + logleechwarn + warnmsg, self.bot, self.message, InlineKeyboardMarkup(buttons.build_menu(2)))
+                    Thread(target=auto_delete_upload_message, args=(bot, self.message, uploadmsg)).start()
 
             if self.seed:
                 if self.newDir:
@@ -473,6 +483,11 @@ class MirrorLeechListener:
                         pass
             else:
                 pass
+            if PICS:
+                uploadmsg = sendPhoto(msg + pmwarn + logwarn + warnmsg, self.bot, self.message, random.choice(PICS), InlineKeyboardMarkup(buttons.build_menu(2)))
+            else:
+                uploadmsg = sendMarkup(msg + pmwarn + logwarn + warnmsg, self.bot, self.message, InlineKeyboardMarkup(buttons.build_menu(2)))
+            Thread(target=auto_delete_upload_message, args=(bot, self.message, uploadmsg)).start()
             
             if MIRROR_LOGS:	
                 try:	
@@ -507,7 +522,6 @@ class MirrorLeechListener:
             self.clean()
         else:
             update_all_messages()
-
 
     def onDownloadError(self, error):
         error = error.replace('<', ' ').replace('>', ' ')

@@ -228,7 +228,6 @@ class MirrorLeechListener:
 
     def onUploadComplete(self, link: str, size, files, folders, typ, name):
         buttons = ButtonMaker()
-        # this is inspired by def mirror to get the link from message
         mesg = self.message.text.split('\n')
         message_args = mesg[0].split(' ', maxsplit=1)
         reply_to = self.message.reply_to_message
@@ -249,24 +248,73 @@ class MirrorLeechListener:
                             bot.sendMessage(chat_id=link_log, text=slmsg + source_link, parse_mode=ParseMode.HTML )
                 except TypeError:
                     pass
+        if AUTO_DELETE_UPLOAD_MESSAGE_DURATION != -1:
+            reply_to = self.message.reply_to_message
+            if reply_to is not None:
+                reply_to.delete()
+            auto_delete_message = int(AUTO_DELETE_UPLOAD_MESSAGE_DURATION / 60)
+            if self.message.chat.type == 'private':
+                warnmsg = ''
+            else:
+                if EMOJI_THEME is True:
+                    warnmsg = f'<b>❗ This message will be deleted in <i>{auto_delete_message} minutes</i> from this group.</b>\n'
+                else:
+                    warnmsg = f'<b>This message will be deleted in <i>{auto_delete_message} minutes</i> from this group.</b>\n'
+        else:
+            warnmsg = ''
+        if BOT_PM and self.message.chat.type != 'private':
+            if EMOJI_THEME is True:
+                pmwarn = f"<b>😉 I have sent files in PM.</b>\n"
+            else:
+                pmwarn = f"<b>I have sent files in PM.</b>\n"
+        elif self.message.chat.type == 'private':
+            pmwarn = ''
+        else:
+            pmwarn = ''
+        if MIRROR_LOGS and self.message.chat.type != 'private':
+            if EMOJI_THEME is True:
+                logwarn = f"<b>⚠️ I have sent files in Mirror Log Channel. Join <a href=\"{MIRROR_LOG_URL}\">Mirror Log channel</a> </b>\n"
+            else:
+                logwarn = f"<b>I have sent files in Mirror Log Channel. Join <a href=\"{MIRROR_LOG_URL}\">Mirror Log channel</a> </b>\n"
+        elif self.message.chat.type == 'private':
+            logwarn = ''
+        else:
+            logwarn = ''
+        if LEECH_LOG and self.message.chat.type != 'private':
+            if EMOJI_THEME is True:
+                logleechwarn = f"<b>⚠️ I have sent files in Leech Log Channel. Join Leech Log channel</a> </b>\n"
+            else:
+                logleechwarn = f"<b>I have sent files in Leech Log Channel. Join Leech Log channel</a> </b>\n"
+        elif self.message.chat.type == 'private':
+            logleechwarn = ''
+        else:
+            logleechwarn = ''
         if not self.isPrivate and INCOMPLETE_TASK_NOTIFIER and DB_URI is not None:
             DbManger().rm_complete_task(self.message.link)
-        msg = f"<b>File Name: </b><code>{escape(name)}</code>\n<b>File Size: </b>{size}"
+        if EMOJI_THEME is True:
+            msg = f"<b>╭🗂️ Name: </b><code>{escape(name)}</code>\n<b>├📐 Size: </b>{size}"
+        else:
+            msg = f"<b>╭ Name: </b><code>{escape(name)}</code>\n<b>├ Size: </b>{size}"
         if self.isLeech:
             if SOURCE_LINK is True:
                 try:
-                    source_link = message_args[1]
-                    if is_magnet(source_link):
+                    mesg = message_args[1]
+                    if is_magnet(mesg):
                         link = telegraph.create_page(
-                        title='Dhruv-Mirror Source Link',
-                        content=source_link,
-                    )["path"]
-                        buttons.buildbutton(f"🔗 Source Link 🔗", f"https://telegra.ph/{link}")
+                            title=f"{TITLE_NAME} Source Link",
+                            content=mesg,
+                        )["path"]
+                        buttons.buildbutton(f"🔗 Source Link", f"https://graph.org/{link}")
+                    elif is_url(mesg):
+                        source_link = mesg
+                        if source_link.startswith(("|", "pswd: ")):
+                            pass
+                        else:
+                            buttons.buildbutton(f"🔗 Source Link", source_link)
                     else:
-                        buttons.buildbutton(f"🔗 Source Link 🔗", source_link)
-                except Exception as e:
-                    LOGGER.warning(e)
-                pass
+                        pass
+                except Exception:
+                    pass
                 if reply_to is not None:
                     try:
                         reply_text = reply_to.text
@@ -274,71 +322,115 @@ class MirrorLeechListener:
                             source_link = reply_text.strip()
                             if is_magnet(source_link):
                                 link = telegraph.create_page(
-                                    title='Dhruv-Mirror Source Link',
+                                    title=f"{TITLE_NAME} Source Link",
                                     content=source_link,
                                 )["path"]
-                                buttons.buildbutton(f"🔗 Source Link 🔗", f"https://telegra.ph/{link}")
+                                buttons.buildbutton(f"🔗 Source Link", f"https://graph.org/{link}")
                             else:
-                                buttons.buildbutton(f"🔗 Source Link 🔗", source_link)
-                    except Exception as e:
-                        LOGGER.warning(e)
+                                buttons.buildbutton(f"🔗 Source Link", source_link)
+                    except Exception:
                         pass
-            if BOT_PM:
-                bot_d = bot.get_me()
-                b_uname = bot_d.username
-                botstart = f"http://t.me/{b_uname}"
-                buttons.buildbutton("Private File", f"{botstart}")
-            msg += f'\n<b>Total Files: </b>{folders}'
-            if typ != 0:
-                msg += f'\n<b>Corrupted Files: </b>{typ}'
-            msg += f'\n\n<b>Hey </b>{self.tag} <b>Your task is Completed. Join Leech Dump if you want access to the file.</b>'
-            msg += f'\n<b>It Tooks:</b> {get_readable_time(time() - self.message.date.timestamp())}'
-            msg += f'\n\n<b>Thank You For using 1st ! Keep Supporting & Keep Loving!</b>'
-            if not files:
-                sendMarkup(msg + fmsg, self.bot, self.message, InlineKeyboardMarkup(buttons.build_menu(2)))
             else:
-                fmsg = '\n<b>Your Files Are:</b>\n'
+                pass
+            if EMOJI_THEME is True:
+                msg += f'\n<b>├📚 Total Files: </b>{folders}'
+            else:
+                msg += f'\n<b>├ Total Files: </b>{folders}'
+            if typ != 0:
+                if EMOJI_THEME is True:
+                    msg += f'\n<b>├💀 Corrupted Files: </b>{typ}'
+                else:
+                    msg += f'\n<b>├ Corrupted Files: </b>{typ}'
+            if EMOJI_THEME is True:
+                msg += f'\n<b>├⌛ It Tooks:</b> {get_readable_time(time() - self.message.date.timestamp())}'
+                msg += f'\n<b>╰👤 cc: </b>{self.tag}\n\n'
+            else: 
+                msg += f'\n<b>├ It Tooks:</b> {get_readable_time(time() - self.message.date.timestamp())}'
+                msg += f'\n<b>╰ cc: </b>{self.tag}\n\n'
+            if BOT_PM and self.message.chat.type != 'private':	
+                bot_d = bot.get_me()	
+                b_uname = bot_d.username	
+                botstart = f"http://t.me/{b_uname}"	
+                buttons.buildbutton("View file in PM", f"{botstart}")
+            elif self.message.chat.type == 'private':
+                botstart = ''
+            else:
+                botstart = ''
+            if LEECH_LOG_INDEXING is True:
+                for i in LEECH_LOG:
+                    indexmsg = ''
+                    for index, (link, name) in enumerate(files.items(), start=1):
+                        indexmsg += f"{index}. <a href='{link}'>{name}</a>\n"
+                        if len(indexmsg.encode() + msg.encode()) > 4000:
+                            sleep(1.5)
+                            bot.sendMessage(chat_id=i, text=msg + indexmsg,
+                                            reply_markup=InlineKeyboardMarkup(buttons.build_menu(2)),
+                                            parse_mode=ParseMode.HTML)
+                            indexmsg = ''
+                    if indexmsg != '':
+                        sleep(1.5)
+                        bot.sendMessage(chat_id=i, text=msg + indexmsg,
+                                        reply_markup=InlineKeyboardMarkup(buttons.build_menu(2)),
+                                        parse_mode=ParseMode.HTML)
+            if not files:
+                fmsg = ''
                 for index, (link, name) in enumerate(files.items(), start=1):
                     fmsg += f"{index}. <a href='{link}'>{name}</a>\n"
                     if len(fmsg.encode() + msg.encode()) > 4000:
-                        sendMessage(msg + fmsg, self.bot, self.message)
+                        uploadmsg = sendMarkup(msg + fmsg + pmwarn + logleechwarn + warnmsg, self.bot, self.message, InlineKeyboardMarkup(buttons.build_menu(2)))
                         sleep(1)
                         fmsg = ''
                 if fmsg != '':
-                    sendMarkup(msg + fmsg, self.bot, self.message, InlineKeyboardMarkup(buttons.build_menu(2)))
-                if LEECH_LOG:
-                    try:
-                        for chatid in LEECH_LOG:
-                            bot.sendMessage(chat_id=chatid, text=msg + fmsg,
-                                            parse_mode=ParseMode.HTML)
-                    except Exception as e:
-                        LOGGER.warning(e)    
+
+            if self.seed:
+                if self.newDir:
+                    clean_target(self.newDir)
+                return			   			  
         else:
-            msg += f'\n<b>Type: </b>{typ}'
-            if ospath.isdir(f'{DOWNLOAD_DIR}{self.uid}/{name}'):
-                msg += f'\n<b>SubFolders: </b>{folders}'
-                msg += f'\n<b>Files: </b>{files}'
-            msg += f'\n\n<b>Hey </b>{self.tag} <b>Your task is Completed. Join Dump if you want access to the file.</b>'
-            msg += f'\n<b>It Tooks:</b> {get_readable_time(time() - self.message.date.timestamp())}'
-            msg += f'\n\n<b>Thank You For using 2nd ! Keep Supporting & Keep Loving!</b>'
+            if EMOJI_THEME is True:
+                msg += f'\n<b>├📦 Type: </b>{typ}'
+            else:
+                msg += f'\n<b>├ Type: </b>{typ}'
+            if typ == "Folder":
+                if EMOJI_THEME is True:
+                    msg += f'\n<b>├🗃️ SubFolders: </b>{folders}'
+                    msg += f'\n<b>├🗂️ Files: </b>{files}'
+                else:
+                    msg += f'\n<b>├ SubFolders: </b>{folders}'
+                    msg += f'\n<b>├ Files: </b>{files}'
+            if EMOJI_THEME is True:
+                msg += f'\n<b>├⌛ It Tooks:</b> {get_readable_time(time() - self.message.date.timestamp())}'
+                msg += f'\n<b>╰👤 cc: </b>{self.tag}\n\n'
+            else:
+                msg += f'\n<b>├ It Tooks:</b> {get_readable_time(time() - self.message.date.timestamp())}'
+                msg += f'\n<b>╰ cc: </b>{self.tag}\n\n'
             buttons = ButtonMaker()
             link = short_url(link)
-            buttons.buildbutton("☁️ Drive Link ☁️", link)
+            buttons.buildbutton("☁️ Drive Link", link)
             LOGGER.info(f'Done Uploading {name}')
             if INDEX_URL is not None:
                 url_path = rutils.quote(f'{name}')
                 share_url = f'{INDEX_URL}/{url_path}'
-                if ospath.isdir(f'{DOWNLOAD_DIR}/{self.uid}/{name}'):
+                if typ == "Folder":
                     share_url += '/'
                     share_url = short_url(share_url)
-                    buttons.buildbutton("⚡ Index Link ⚡", share_url)
+                    buttons.buildbutton("⚡ Index Link", share_url)
                 else:
                     share_url = short_url(share_url)
-                    buttons.buildbutton("⚡ Index Link ⚡", share_url)
+                    buttons.buildbutton("⚡ Index Link", share_url)
                     if VIEW_LINK:
                         share_urls = f'{INDEX_URL}/{url_path}?a=view'
                         share_urls = short_url(share_urls)
-                        buttons.buildbutton("🌐 View Link 🌐", share_urls)
+                        buttons.buildbutton("🌐 View Link", share_urls)
+                    if BOT_PM and self.message.chat.type != 'private':	
+                        bot_d = bot.get_me()	
+                        b_uname = bot_d.username	
+                        botstart = f"http://t.me/{b_uname}"	
+                        buttons.buildbutton("View file in PM", f"{botstart}")
+                    elif self.message.chat.type == 'private':
+                        botstart = ''
+                    else:
+                        botstart = ''
             if BUTTON_FOUR_NAME is not None and BUTTON_FOUR_URL is not None:
                 buttons.buildbutton(f"{BUTTON_FOUR_NAME}", f"{BUTTON_FOUR_URL}")
             if BUTTON_FIVE_NAME is not None and BUTTON_FIVE_URL is not None:
@@ -350,65 +442,61 @@ class MirrorLeechListener:
                     mesg = message_args[1]
                     if is_magnet(mesg):
                         link = telegraph.create_page(
-                            title='Helios-Mirror Source Link',
+                            title=f"{TITLE_NAME} Source Link",
                             content=mesg,
                         )["path"]
-                        buttons.buildbutton(f"🔗 Source Link 🔗", f"https://telegra.ph/{link}")
+                        buttons.buildbutton(f"🔗 Source Link", f"https://graph.org/{link}")
                     elif is_url(mesg):
                         source_link = mesg
                         if source_link.startswith(("|", "pswd: ")):
                             pass
                         else:
-                            buttons.buildbutton(f"🔗 Source Link 🔗", source_link)
+                            buttons.buildbutton(f"🔗 Source Link", source_link)
                     else:
                         pass
-                except Exception as e:
-                    LOGGER.warning(e)
+                except Exception:
                     pass
-            if reply_to is not None:
-                try:
-                    reply_text = reply_to.text
-                    if is_url(reply_text):
-                        source_link = reply_text.strip()
-                        if is_magnet(source_link):
-                            link = telegraph.create_page(
-                                title='Dhruv-Mirror Source Link',
-                                content=source_link,
-                            )["path"]
-                            buttons.buildbutton(f"🔗 Source Link 🔗", f"https://telegra.ph/{link}")
-                        else:
-                            buttons.buildbutton(f"🔗 Source Link 🔗", source_link)
-                except Exception as e:
-                    LOGGER.warning(e)
-                    pass
+                if reply_to is not None:
+                    try:
+                        reply_text = reply_to.text
+                        if is_url(reply_text):
+                            source_link = reply_text.strip()
+                            if is_magnet(source_link):
+                                link = telegraph.create_page(
+                                    title=f"{TITLE_NAME} Source Link",
+                                    content=source_link,
+                                )["path"]
+                                buttons.buildbutton(f"🔗 Source Link", f"https://graph.org/{link}")
+                            else:
+                                buttons.buildbutton(f"🔗 Source Link", source_link)
+                    except Exception:
+                        pass
             else:
                 pass
-            uploadmsg = sendMarkup(msg, self.bot, self.message, InlineKeyboardMarkup(buttons.build_menu(2)))
-            Thread(target=auto_delete_upload_message, args=(bot, self.message, uploadmsg)).start()
-            if MIRROR_LOGS:
-                try:
-                    for chatid in MIRROR_LOGS:
-                        bot.sendMessage(chat_id=chatid, text=msg,
-                                        reply_markup=InlineKeyboardMarkup(buttons.build_menu(2)),
-                                        parse_mode=ParseMode.HTML)
-                except Exception as e:
-                    LOGGER.warning(e)
-            if BOT_PM and self.message.chat.type != 'private':
-                try:
-                    bot.sendMessage(chat_id=self.user_id, text=msg,
-                                    reply_markup=InlineKeyboardMarkup(buttons.build_menu(2)),
-                                    parse_mode=ParseMode.HTML)
-                except Exception as e:
-                    LOGGER.warning(e)
+            
+            if MIRROR_LOGS:	
+                try:	
+                    for chatid in MIRROR_LOGS:	
+                        bot.sendMessage(chat_id=chatid, text=msg,	
+                                        reply_markup=InlineKeyboardMarkup(buttons.build_menu(2)),	
+                                        parse_mode=ParseMode.HTML)	
+                except Exception as e:	
+                    LOGGER.warning(e)	
+            if BOT_PM and self.message.chat.type != 'private':	
+                try:	
+                    bot.sendMessage(chat_id=self.user_id, text=msg,	
+                                    reply_markup=InlineKeyboardMarkup(buttons.build_menu(2)),	
+                                    parse_mode=ParseMode.HTML)	
+                except Exception as e:	
+                    LOGGER.warning(e)	
                     return
-            if self.isQbit and QB_SEED and not self.extract:
+            if self.seed:
                 if self.isZip:
-                    try:
-                        osremove(f'{DOWNLOAD_DIR}{self.uid}/{name}')
-                    except:
-                        pass
+                    clean_target(f"{self.dir}/{name}")
+                elif self.newDir:
+                    clean_target(self.newDir)
                 return
-        clean_download(f'{DOWNLOAD_DIR}{self.uid}')
+        clean_download(self.dir)
         with download_dict_lock:
             try:
                 del download_dict[self.uid]

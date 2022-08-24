@@ -1,9 +1,18 @@
 from requests import utils as rutils
-from re import search as re_search
+from subprocess import run as srun
+import random
+from random import choice
+from pathlib import PurePath
+from telegram.ext import CommandHandler
+from re import match as re_match, search as re_search, split as re_split
 from time import sleep, time
+from base64 import b64encode
+from shutil import rmtree
 from os import path as ospath, remove as osremove, listdir, walk
 from subprocess import Popen
 from html import escape
+from threading import Thread
+from telegram import InlineKeyboardMarkup, ParseMode, InlineKeyboardButton
 
 from bot import bot, Interval, INDEX_URL, BUTTON_FOUR_NAME, BUTTON_FOUR_URL, BUTTON_FIVE_NAME, BUTTON_FIVE_URL, \
                 BUTTON_SIX_NAME, BUTTON_SIX_URL, VIEW_LINK, aria2, DOWNLOAD_DIR, download_dict, download_dict_lock, \

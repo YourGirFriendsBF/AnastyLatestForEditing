@@ -183,16 +183,6 @@ class TgUploader:
         if not ospath.lexists(self.__thumb):
             self.__thumb = None
 
-    def __msg_to_reply(self):
-        if DUMP_CHAT is not None:
-            if self.__listener.isPrivate:
-                msg = self.__listener.message.text
-            else:
-                msg = self.__listener.message.link
-            self.__sent_msg = app.send_message(DUMP_CHAT, msg)
-        else:
-            self.__sent_msg = app.get_messages(self.__listener.message.chat.id, self.__listener.uid)
-
     @property
     def speed(self):
         with self.__resource_lock:

@@ -13,9 +13,10 @@ LOGGER = getLogger(__name__)
 getLogger("pyrogram").setLevel(ERROR)
 
 IMAGE_SUFFIXES = ("JPG", "JPX", "PNG", "CR2", "TIF", "BMP", "JXR", "PSD", "ICO", "HEIC", "JPEG")
+class TgUploader:
 
-
-self.name = name
+    def __init__(self, name=None, path=None, size=0, listener=None):
+        self.name = name
         self.uploaded_bytes = 0
         self._last_uploaded = 0
         self.__listener = listener
@@ -36,6 +37,7 @@ self.name = name
         self.__app = app
         self.__user_id = listener.message.from_user.id
         self.isPrivate = listener.message.chat.type in ['private', 'group']
+
 
     def upload(self, o_files):
         for dirpath, subdir, files in sorted(walk(self.__path)):

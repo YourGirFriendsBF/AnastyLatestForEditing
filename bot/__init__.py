@@ -254,7 +254,8 @@ try:
     if len(DB_URI) == 0:
         raise KeyError
 except:
-    tgBotMaxFileSize = 2097151000
+    DB_URI = None
+tgBotMaxFileSize = 2097151000
 try:
     TG_SPLIT_SIZE = getConfig('TG_SPLIT_SIZE')
     if len(TG_SPLIT_SIZE) == 0 or int(TG_SPLIT_SIZE) > tgBotMaxFileSize:

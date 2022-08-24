@@ -7,7 +7,8 @@ from html import escape
 
 from bot import Interval, INDEX_URL, BUTTON_FOUR_NAME, BUTTON_FOUR_URL, BUTTON_FIVE_NAME, BUTTON_FIVE_URL, \
                 BUTTON_SIX_NAME, BUTTON_SIX_URL, VIEW_LINK, aria2, DOWNLOAD_DIR, download_dict, download_dict_lock, \
-                TG_SPLIT_SIZE, LOGGER, DB_URI, INCOMPLETE_TASK_NOTIFIER, MAX_SPLIT_SIZE, LEECH_LOG, BOT_PM
+                TG_SPLIT_SIZE, LOGGER, DB_URI, INCOMPLETE_TASK_NOTIFIER, MAX_SPLIT_SIZE, LEECH_LOG, BOT_PM, MIRROR_LOGS, LINK_LOGS, \
+                SOURCE_LINK
 from bot.helper.ext_utils.fs_utils import get_base_name, get_path_size, split_file, clean_download, clean_target
 from bot.helper.ext_utils.exceptions import NotSupportedExtractionArchive
 from bot.helper.mirror_utils.status_utils.extract_status import ExtractStatus
@@ -72,15 +73,15 @@ class MirrorLeechListener:
             with download_dict_lock:
                 download_dict[self.uid] = ZipStatus(name, size, gid, self)
             if self.pswd is not None:
-                if self.isLeech and int(size) > LEECH_SPLIT_SIZE:
+                if self.isLeech and int(size) > TG_SPLIT_SIZE:
                     LOGGER.info(f'Zip: orig_path: {m_path}, zip_path: {path}.0*')
-                    self.suproc = Popen(["7z", f"-v{LEECH_SPLIT_SIZE}b", "a", "-mx=0", f"-p{self.pswd}", path, m_path])
+                    self.suproc = Popen(["7z", f"-v{TG_SPLIT_SIZE}b", "a", "-mx=0", f"-p{self.pswd}", path, m_path])
                 else:
                     LOGGER.info(f'Zip: orig_path: {m_path}, zip_path: {path}')
                     self.suproc = Popen(["7z", "a", "-mx=0", f"-p{self.pswd}", path, m_path])
-            elif self.isLeech and int(size) > LEECH_SPLIT_SIZE:
+            elif self.isLeech and int(size) > TG_SPLIT_SIZE:
                 LOGGER.info(f'Zip: orig_path: {m_path}, zip_path: {path}.0*')
-                self.suproc = Popen(["7z", f"-v{LEECH_SPLIT_SIZE}b", "a", "-mx=0", path, m_path])
+                self.suproc = Popen(["7z", f"-v{TG_SPLIT_SIZE}b", "a", "-mx=0", path, m_path])
             else:
                 LOGGER.info(f'Zip: orig_path: {m_path}, zip_path: {path}')
                 self.suproc = Popen(["7z", "a", "-mx=0", path, m_path])
@@ -166,17 +167,17 @@ class MirrorLeechListener:
                     for file_ in files:
                         f_path = ospath.join(dirpath, file_)
                         f_size = ospath.getsize(f_path)
-                        if f_size > LEECH_SPLIT_SIZE:
+                        if f_size > TG_SPLIT_SIZE:
                             if not checked:
                                 checked = True
                                 with download_dict_lock:
                                     download_dict[self.uid] = SplitStatus(up_name, size, gid, self)
                                 LOGGER.info(f"Splitting: {up_name}")
-                            res = split_file(f_path, f_size, file_, dirpath, LEECH_SPLIT_SIZE, self)
+                            res = split_file(f_path, f_size, file_, dirpath, TG_SPLIT_SIZE, self)
                             if not res:
                                 return
                             if res == "errored":
-                                if f_size <= MAX_SPLIT_SIZE:
+                                if f_size <= TG_SPLIT_SIZE:
                                     continue
                                 else:
                                     try:
@@ -214,18 +215,77 @@ class MirrorLeechListener:
             drive.upload(up_name)
 
     def onUploadComplete(self, link: str, size, files, folders, typ, name):
+        buttons = ButtonMaker()
+        # this is inspired by def mirror to get the link from message
+        mesg = self.message.text.split('\n')
+        message_args = mesg[0].split(' ', maxsplit=1)
+        reply_to = self.message.reply_to_message
+        slmsg = f"Added by: {self.tag} \n👥 User ID: <code>{self.user_id}</code>\n\n"
+        if LINK_LOGS:
+            try:
+                source_link = f"<code>{message_args[1]}</code>"
+                for link_log in LINK_LOGS:
+                    bot.sendMessage(link_log, text=slmsg + source_link, parse_mode=ParseMode.HTML )
+            except IndexError:
+                pass
+            if reply_to is not None:
+                try:
+                    reply_text = reply_to.text
+                    if is_url(reply_text):
+                        source_link = f"<code>{reply_text.strip()}</code>"
+                        for link_log in LINK_LOGS:
+                            bot.sendMessage(chat_id=link_log, text=slmsg + source_link, parse_mode=ParseMode.HTML )
+                except TypeError:
+                    pass
         if not self.isPrivate and INCOMPLETE_TASK_NOTIFIER and DB_URI is not None:
             DbManger().rm_complete_task(self.message.link)
-        msg = f"<b>Name: </b><code>{escape(name)}</code>\n\n<b>Size: </b>{size}"
+        msg = f"<b>File Name: </b><code>{escape(name)}</code>\n<b>File Size: </b>{size}"
         if self.isLeech:
+            if SOURCE_LINK is True:
+                try:
+                    source_link = message_args[1]
+                    if is_magnet(source_link):
+                        link = telegraph.create_page(
+                        title='Dhruv-Mirror Source Link',
+                        content=source_link,
+                    )["path"]
+                        buttons.buildbutton(f"🔗 Source Link 🔗", f"https://telegra.ph/{link}")
+                    else:
+                        buttons.buildbutton(f"🔗 Source Link 🔗", source_link)
+                except Exception as e:
+                    LOGGER.warning(e)
+                pass
+                if reply_to is not None:
+                    try:
+                        reply_text = reply_to.text
+                        if is_url(reply_text):
+                            source_link = reply_text.strip()
+                            if is_magnet(source_link):
+                                link = telegraph.create_page(
+                                    title='Dhruv-Mirror Source Link',
+                                    content=source_link,
+                                )["path"]
+                                buttons.buildbutton(f"🔗 Source Link 🔗", f"https://telegra.ph/{link}")
+                            else:
+                                buttons.buildbutton(f"🔗 Source Link 🔗", source_link)
+                    except Exception as e:
+                        LOGGER.warning(e)
+                        pass
+            if BOT_PM:
+                bot_d = bot.get_me()
+                b_uname = bot_d.username
+                botstart = f"http://t.me/{b_uname}"
+                buttons.buildbutton("Private File", f"{botstart}")
             msg += f'\n<b>Total Files: </b>{folders}'
             if typ != 0:
                 msg += f'\n<b>Corrupted Files: </b>{typ}'
-            msg += f'\n<b>cc: </b>{self.tag}\n\n'
+            msg += f'\n\n<b>Hey </b>{self.tag} <b>Your task is Completed. Join Leech Dump if you want access to the file.</b>'
+            msg += f'\n<b>It Tooks:</b> {get_readable_time(time() - self.message.date.timestamp())}'
+            msg += f'\n\n<b>Thank You For using {TITLE_NAME}! Keep Supporting & Keep Loving!</b>'
             if not files:
-                sendMessage(msg, self.bot, self.message)
+                sendMarkup(msg + fmsg, self.bot, self.message, InlineKeyboardMarkup(buttons.build_menu(2)))
             else:
-                fmsg = ''
+                fmsg = '\n<b>Your Files Are:</b>\n'
                 for index, (link, name) in enumerate(files.items(), start=1):
                     fmsg += f"{index}. <a href='{link}'>{name}</a>\n"
                     if len(fmsg.encode() + msg.encode()) > 4000:
@@ -233,17 +293,22 @@ class MirrorLeechListener:
                         sleep(1)
                         fmsg = ''
                 if fmsg != '':
-                    sendMessage(msg + fmsg, self.bot, self.message)
-            if self.seed:
-                if self.newDir:
-                    clean_target(self.newDir)
-                return
+                    sendMarkup(msg + fmsg, self.bot, self.message, InlineKeyboardMarkup(buttons.build_menu(2)))
+                if LEECH_LOG:
+                    try:
+                        for chatid in LEECH_LOG:
+                            bot.sendMessage(chat_id=chatid, text=msg + fmsg,
+                                            parse_mode=ParseMode.HTML)
+                    except Exception as e:
+                        LOGGER.warning(e)    
         else:
-            msg += f'\n\n<b>Type: </b>{typ}'
-            if typ == "Folder":
+            msg += f'\n<b>Type: </b>{typ}'
+            if ospath.isdir(f'{DOWNLOAD_DIR}{self.uid}/{name}'):
                 msg += f'\n<b>SubFolders: </b>{folders}'
                 msg += f'\n<b>Files: </b>{files}'
-            msg += f'\n\n<b>cc: </b>{self.tag}'
+            msg += f'\n\n<b>Hey </b>{self.tag} <b>Your task is Completed. Join Dump if you want access to the file.</b>'
+            msg += f'\n<b>It Tooks:</b> {get_readable_time(time() - self.message.date.timestamp())}'
+            msg += f'\n\n<b>Thank You For using {TITLE_NAME}! Keep Supporting & Keep Loving!</b>'
             buttons = ButtonMaker()
             buttons.buildbutton("☁️ Drive Link", link)
             LOGGER.info(f'Done Uploading {name}')
@@ -264,14 +329,70 @@ class MirrorLeechListener:
                 buttons.buildbutton(f"{BUTTON_FIVE_NAME}", f"{BUTTON_FIVE_URL}")
             if BUTTON_SIX_NAME is not None and BUTTON_SIX_URL is not None:
                 buttons.buildbutton(f"{BUTTON_SIX_NAME}", f"{BUTTON_SIX_URL}")
-            sendMarkup(msg, self.bot, self.message, buttons.build_menu(2))
-            if self.seed:
+            if SOURCE_LINK is True:
+                try:
+                    mesg = message_args[1]
+                    if is_magnet(mesg):
+                        link = telegraph.create_page(
+                            title='Helios-Mirror Source Link',
+                            content=mesg,
+                        )["path"]
+                        buttons.buildbutton(f"🔗 Source Link 🔗", f"https://telegra.ph/{link}")
+                    elif is_url(mesg):
+                        source_link = mesg
+                        if source_link.startswith(("|", "pswd: ")):
+                            pass
+                        else:
+                            buttons.buildbutton(f"🔗 Source Link 🔗", source_link)
+                    else:
+                        pass
+                except Exception as e:
+                    LOGGER.warning(e)
+                    pass
+            if reply_to is not None:
+                try:
+                    reply_text = reply_to.text
+                    if is_url(reply_text):
+                        source_link = reply_text.strip()
+                        if is_magnet(source_link):
+                            link = telegraph.create_page(
+                                title='Dhruv-Mirror Source Link',
+                                content=source_link,
+                            )["path"]
+                            buttons.buildbutton(f"🔗 Source Link 🔗", f"https://telegra.ph/{link}")
+                        else:
+                            buttons.buildbutton(f"🔗 Source Link 🔗", source_link)
+                except Exception as e:
+                    LOGGER.warning(e)
+                    pass
+            else:
+                pass
+            uploadmsg = sendMarkup(msg, self.bot, self.message, InlineKeyboardMarkup(buttons.build_menu(2)))
+            Thread(target=auto_delete_upload_message, args=(bot, self.message, uploadmsg)).start()
+            if MIRROR_LOGS:
+                try:
+                    for chatid in MIRROR_LOGS:
+                        bot.sendMessage(chat_id=chatid, text=msg,
+                                        reply_markup=InlineKeyboardMarkup(buttons.build_menu(2)),
+                                        parse_mode=ParseMode.HTML)
+                except Exception as e:
+                    LOGGER.warning(e)
+            if BOT_PM and self.message.chat.type != 'private':
+                try:
+                    bot.sendMessage(chat_id=self.user_id, text=msg,
+                                    reply_markup=InlineKeyboardMarkup(buttons.build_menu(2)),
+                                    parse_mode=ParseMode.HTML)
+                except Exception as e:
+                    LOGGER.warning(e)
+                    return
+            if self.isQbit and QB_SEED and not self.extract:
                 if self.isZip:
-                    clean_target(f"{self.dir}/{name}")
-                elif self.newDir:
-                    clean_target(self.newDir)
+                    try:
+                        osremove(f'{DOWNLOAD_DIR}{self.uid}/{name}')
+                    except:
+                        pass
                 return
-        clean_download(self.dir)
+        clean_download(f'{DOWNLOAD_DIR}{self.uid}')
         with download_dict_lock:
             try:
                 del download_dict[self.uid]
@@ -282,6 +403,7 @@ class MirrorLeechListener:
             self.clean()
         else:
             update_all_messages()
+
 
     def onDownloadError(self, error):
         error = error.replace('<', ' ').replace('>', ' ')

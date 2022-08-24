@@ -180,7 +180,12 @@ try:
 except:
     log_error("One or more env variables missing! Exiting now")
     exit(1)
-
+try:
+    AUTO_DELETE_UPLOAD_MESSAGE_DURATION = int(getConfig('AUTO_DELETE_UPLOAD_MESSAGE_DURATION'))
+except KeyError as e:
+    AUTO_DELETE_UPLOAD_MESSAGE_DURATION = -1
+    LOGGER.warning("AUTO_DELETE_UPLOAD_MESSAGE_DURATION var missing!")
+    pass
 try:
     aid = getConfig('AUTHORIZED_CHATS')
     aid = aid.split()

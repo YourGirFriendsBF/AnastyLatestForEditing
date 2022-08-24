@@ -148,7 +148,17 @@ try:
     BOT_PM = BOT_PM.lower() == 'true'	
 except KeyError:	
     BOT_PM = False
-    
+try:
+    TITLE_NAME = getConfig('TITLE_NAME')
+    if len(TITLE_NAME) == 0:
+        TITLE_NAME = 'WeebZone'
+except KeyError:
+    TITLE_NAME = 'DhruvMirror'
+try:
+    EMOJI_THEME = getConfig('EMOJI_THEME')
+    EMOJI_THEME = EMOJI_THEME.lower() == 'true'
+except:
+    EMOJI_THEME = False    
 try:	
     aid = getConfig('LEECH_LOG')	
     aid = aid.split(' ')	
